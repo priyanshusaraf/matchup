@@ -4,25 +4,12 @@ import {
   sendProfile,
   adminResponse,
 } from "../controllers/auth";
-import { newUserValidator } from "../middleware/validator";
 import { Router, RequestHandler } from "express";
-import { verifyToken } from "../utils/jwt";
+import { verifyToken, signToken } from "../utils/jwt";
 import prisma from "../db"; // Import Prisma client
+import passport from "../utils/passport"; // For Google OAuth
 
 const authRouter = Router();
-
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: number;
-        name: string;
-        email: string;
-        role: "PLAYER" | "MANAGER" | "BUSINESS";
-      };
-    }
-  }
-}
 
 // Middleware: isAuth
 const isAuth: RequestHandler = async (req, res, next) => {
@@ -54,7 +41,7 @@ const isAuth: RequestHandler = async (req, res, next) => {
       id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role as "PLAYER" | "MANAGER" | "BUSINESS",
+      role: user.role,
     };
 
     next();
@@ -73,8 +60,55 @@ const isManager: RequestHandler = (req, res, next) => {
   }
 };
 
+// Google OAuth Routes
+authRouter.get("/google", (req, res, next) => {
+  const { role } = req.query;
+
+  if (!role || !["PLAYER", "MANAGER", "BUSINESS"].includes(role as string)) {
+    return res.status(400).json({ error: "Invalid or missing role." });
+  }
+
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+    state: JSON.stringify({ role }),
+  })(req, res, next);
+});
+authRouter.get(
+  "/google/callback",
+  passport.authenticate("google", { session: false }),
+  (req, res) => {
+    try {
+      const user = req.user;
+      if (!user) {
+        return res.status(500).json({ error: "Google authentication failed." });
+      }
+
+      // Generate JWT token
+      // Generate JWT token
+      const token = signToken({
+        id: user.id,
+        role: user.role,
+      });
+
+      res.json({
+        message: "Google OAuth successful.",
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+      });
+    } catch (error) {
+      console.error("Error in Google OAuth callback:", error);
+      res.status(500).json({ error: "Google OAuth callback failed." });
+    }
+  }
+);
+
 // Routes
-authRouter.post("/signup", newUserValidator, createUser);
+authRouter.post("/signup", createUser);
 authRouter.post("/signin", signin);
 authRouter.get("/profile", isAuth, sendProfile);
 authRouter.get("/admin", isAuth, isManager, adminResponse);

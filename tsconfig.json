@@ -14,5 +14,7 @@
     "paths": {
       "@/*": ["./src/*"]
     }
-  }
+  },
+  "include": ["src/**/*", "types/**/*"], // Ensure both `src` and `types` are included
+  "exclude": ["node_modules"] // Exclude unnecessary directories
 }

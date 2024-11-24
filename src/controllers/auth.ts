@@ -21,7 +21,7 @@ export const createUser: RequestHandler = async (req, res) => {
       return errorResponse(res, "All fields are required!", 400);
     }
 
-    if (!Object.values(Roles).includes(role)) {
+    if (!["PLAYER", "MANAGER", "BUSINESS"].includes(role)) {
       return errorResponse(res, "Invalid role provided!", 400);
     }
 
