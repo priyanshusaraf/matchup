@@ -1,60 +1,82 @@
 import {
-  adminResponse,
   createUser,
-  privateResponse,
-  sendProfile,
   signin,
-} from "@/controllers/auth";
-import { newUserValidator } from "@/middleware/validator";
-import UserModel from "@/models/user";
-import { Router } from "express";
-import { RequestHandler } from "express-serve-static-core";
-import jwt, { JsonWebTokenError } from "jsonwebtoken";
+  sendProfile,
+  adminResponse,
+} from "../controllers/auth";
+import { newUserValidator } from "../middleware/validator";
+import { Router, RequestHandler } from "express";
+import { verifyToken } from "../utils/jwt";
+import prisma from "../db"; // Import Prisma client
 
 const authRouter = Router();
 
 declare global {
   namespace Express {
     interface Request {
-      user: {
-        [key: string]: any;
+      user?: {
+        id: number;
+        name: string;
+        email: string;
+        role: "PLAYER" | "MANAGER" | "BUSINESS";
       };
     }
   }
 }
 
+// Middleware: isAuth
 const isAuth: RequestHandler = async (req, res, next) => {
   try {
-    const authorizationToken = req.headers.authorization;
-    const token = authorizationToken?.split("Bearer ")[1];
-    if (!token) return res.status(403).json({ error: "unauthorized access!" });
+    const authorizationHeader = req.headers.authorization;
+    const token = authorizationHeader?.split("Bearer ")[1];
+    if (!token) {
+      return res
+        .status(403)
+        .json({ error: "Unauthorized access: No token provided." });
+    }
 
-    const payload = jwt.verify(token, "secret") as { id: string };
+    // Verify token
+    const decoded = verifyToken(token);
 
-    const user = await UserModel.findById(payload.id);
-    if (!user) return res.status(403).json({ error: "unauthorized access!" });
+    // Fetch user from database
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+    });
 
-    req.user = user;
+    if (!user) {
+      return res
+        .status(403)
+        .json({ error: "Unauthorized access: User not found." });
+    }
+
+    // Attach user to request object
+    req.user = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role as "PLAYER" | "MANAGER" | "BUSINESS",
+    };
 
     next();
   } catch (error) {
-    if (error instanceof JsonWebTokenError) {
-      res.status(403).json({ error: "unauthorized access!" });
-    } else {
-      res.status(500).json({ error: "Something went wrong!" });
-    }
+    console.error("Authentication Error:", error);
+    return res.status(403).json({ error: "Unauthorized access." });
   }
 };
 
-const isAdmin: RequestHandler = async (req, res, next) => {
-  if (req.user.role === "admin") next();
-  else res.status(403).json({ error: "Protected only for admin!" });
+// Middleware: isManager (Admin Role)
+const isManager: RequestHandler = (req, res, next) => {
+  if (req.user?.role === "MANAGER") {
+    return next();
+  } else {
+    return res.status(403).json({ error: "Access denied: Managers only." });
+  }
 };
 
+// Routes
 authRouter.post("/signup", newUserValidator, createUser);
-authRouter.post("/signin", newUserValidator, signin);
+authRouter.post("/signin", signin);
 authRouter.get("/profile", isAuth, sendProfile);
-authRouter.get("/private", isAuth, privateResponse);
-authRouter.get("/admin", isAuth, isAdmin, adminResponse);
+authRouter.get("/admin", isAuth, isManager, adminResponse);
 
 export default authRouter;

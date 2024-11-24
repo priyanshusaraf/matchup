@@ -1,12 +1,21 @@
-import mongoose from "mongoose";
+import { PrismaClient } from "@prisma/client";
+import dotenv from "dotenv";
 
-const uri = "mongodb://127.0.0.1:27017/my_cool_db";
+dotenv.config();
 
-mongoose
-  .connect(uri)
-  .then(() => {
+const prisma = new PrismaClient();
+
+// Test the database connection
+async function connectDB() {
+  try {
+    await prisma.$connect();
     console.log("DB is connected!");
-  })
-  .catch((err) => {
-    console.log("Could not connect: ", err.message);
-  });
+  } catch (error) {
+    console.error("Could not connect to the database: ", error.message);
+    process.exit(1); // Exit process with failure
+  }
+}
+
+connectDB();
+
+export default prisma;
