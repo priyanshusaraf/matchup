@@ -7,54 +7,98 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Role Enum
 enum Role {
   PLAYER
   MANAGER
   BUSINESS
 }
 
+// Sport Enum
+enum Sport {
+  PICKLEBALL
+  FOOTBALL
+  CRICKET
+  BASKETBALL
+  BADMINTON
+  SQUASH
+  TENNIS
+}
+
+// Turf Model
+model Turf {
+  id                  Int       @id @default(autoincrement())
+  name                String
+  location            String // Address or description of the location
+  latitude            Float
+  longitude           Float
+  isTemporarilyClosed Boolean   @default(false) // Closure status for the entire turf
+  ownerId             Int
+  owner               User      @relation(fields: [ownerId], references: [id])
+  courts              Court[] // Courts under this turf
+  bookings            Booking[] // Bookings associated with this turf
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+// User Model
 model User {
-  id          Int         @id @default(autoincrement())
-  email       String      @unique
-  name        String
-  password    String
-  role        Role        @default(PLAYER) // Default to PLAYER
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  bookings    Booking[]   // User's bookings
-  businesses  Business[]  // Businesses owned by the user
-}
-
-model Business {
-  id        Int        @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
   name      String
-  location  String
-  ownerId   Int
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  bookings  Booking[]  @relation("BusinessBookings")
-  owner     User       @relation(fields: [ownerId], references: [id]) // Owner of the business
-  courts    Court[]
+  password  String
+  role      Role      @default(PLAYER) // Default to PLAYER
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  turfs     Turf[] // Turfs owned by the user (if Business)
+  bookings  Booking[] // Bookings made by the user
 }
 
+// Court Model
 model Court {
-  id          Int       @id @default(autoincrement())
-  name        String
-  description String?
-  businessId  Int
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  bookings    Booking[]
-  business    Business  @relation(fields: [businessId], references: [id])
+  id                  Int       @id @default(autoincrement())
+  name                String
+  sport               Sport
+  turfId              Int
+  turf                Turf      @relation(fields: [turfId], references: [id])
+  isTemporarilyClosed Boolean   @default(false) // Closure status for this court
+  timings             Timing[] // Operational timings
+  prices              Price[] // Day/Night pricing
+  bookings            Booking[] // Bookings for this court
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 }
 
+// Timing Model
+model Timing {
+  id        Int    @id @default(autoincrement())
+  startTime String // e.g., "6:00 AM"
+  endTime   String // e.g., "12:00 PM"
+  courtId   Int
+  court     Court  @relation(fields: [courtId], references: [id])
+}
+
+// Price Model
+model Price {
+  id      Int    @id @default(autoincrement())
+  type    String // "day" or "night"
+  amount  Float
+  courtId Int
+  court   Court  @relation(fields: [courtId], references: [id])
+}
+
+// Booking Model
 model Booking {
-  id         Int       @id @default(autoincrement())
-  userId     Int
-  courtId    Int
-  businessId Int?
-  createdAt  DateTime  @default(now())
-  business   Business? @relation("BusinessBookings", fields: [businessId], references: [id])
-  court      Court     @relation(fields: [courtId], references: [id])
-  user       User      @relation(fields: [userId], references: [id])
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  courtId     Int
+  turfId      Int
+  startTime   DateTime
+  endTime     DateTime
+  totalAmount Float
+  status      String // "active", "canceled", "completed"
+  user        User     @relation(fields: [userId], references: [id])
+  court       Court    @relation(fields: [courtId], references: [id])
+  turf        Turf     @relation(fields: [turfId], references: [id])
+  createdAt   DateTime @default(now())
 }
