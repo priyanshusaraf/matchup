@@ -40,3 +40,6 @@ exports.verifyPayment = (req, res) => {
     res.status(400).json({ error: "Invalid signature" });
   }
 };
+
+//business: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTIsInJvbGUiOiJCVVNJTkVTUyIsImlhdCI6MTczMjc1MjUwNSwiZXhwIjoxNzMyNzU2MTA1fQ.H7MFQqGM_b0bgJLhF-MwPmSKUNRqMyNMzujR-yAfytg
+//player: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTMsInJvbGUiOiJQTEFZRVIiLCJpYXQiOjE3MzI3Nzc4ODYsImV4cCI6MTczMjc4MTQ4Nn0.F54q0zDzM2_L1P0f10I3d1h-TlI5s92-eHNR5hlFh-M

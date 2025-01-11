@@ -96,9 +96,10 @@ model Booking {
   startTime   DateTime
   endTime     DateTime
   totalAmount Float
-  status      String // "active", "canceled", "completed"
+  status      String   @default("active") // Default to "active"
   user        User     @relation(fields: [userId], references: [id])
   court       Court    @relation(fields: [courtId], references: [id])
   turf        Turf     @relation(fields: [turfId], references: [id])
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt // Auto-update timestamp
 }

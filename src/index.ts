@@ -5,6 +5,8 @@ import "./db/index.ts"; // Ensure this initializes your database
 import authRouter from "./routes/auth";
 import turfRouter from "./routes/turfRouter"; // Import turf router
 import courtRouter from "./routes/courtRouter";
+import bookingRouter from "./routes/bookingRouter";
+import playerRouter from "./routes/playerRouter";
 
 // Load environment variables
 dotenv.config();
@@ -36,9 +38,17 @@ app.use(
     res.status(500).json({ error: "Internal server error" });
   }
 );
+// Register the booking routes
+app.use("/bookings", bookingRouter);
 
+//Register the courts routes
 app.use("/courts", courtRouter);
+
+// Register player routes
+app.use("/player", playerRouter);
+
 // Server Setup
+
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {
   console.log(`App is running on http://localhost:${PORT}`);

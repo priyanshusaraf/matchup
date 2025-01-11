@@ -2,6 +2,15 @@ import { Response, NextFunction } from "express";
 import prisma from "../db";
 import { AuthenticatedRequest } from "../../types/express"; // Import from the types folder
 
+// Helper function to parse integer IDs
+const parseId = (id: string): number => {
+  const parsed = parseInt(id);
+  if (isNaN(parsed)) {
+    throw new Error("Invalid ID");
+  }
+  return parsed;
+};
+
 // Create a new turf
 export const createTurf = async (
   req: AuthenticatedRequest,
@@ -11,7 +20,12 @@ export const createTurf = async (
   try {
     const { name, location, latitude, longitude } = req.body;
 
-    if (!name || !location || !latitude || !longitude) {
+    if (
+      !name ||
+      !location ||
+      latitude === undefined ||
+      longitude === undefined
+    ) {
       return res.status(400).json({ error: "All fields are required" });
     }
 
@@ -19,8 +33,8 @@ export const createTurf = async (
       data: {
         name,
         location,
-        latitude,
-        longitude,
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
         ownerId: req.user!.id, // Authenticated user ID
       },
     });
@@ -41,7 +55,7 @@ export const getTurfs = async (
   try {
     const turfs = await prisma.turf.findMany({
       where: { ownerId: req.user!.id },
-      include: { courts: true, bookings: true }, // Include related courts and bookings
+      include: { courts: true, bookings: true },
     });
 
     res.status(200).json({ turfs });
@@ -63,13 +77,13 @@ export const updateTurf = async (
       req.body;
 
     const turf = await prisma.turf.update({
-      where: { id: parseInt(id) },
+      where: { id: parseId(id) },
       data: {
-        name,
-        location,
-        latitude,
-        longitude,
-        isTemporarilyClosed,
+        ...(name && { name }),
+        ...(location && { location }),
+        ...(latitude !== undefined && { latitude: parseFloat(latitude) }),
+        ...(longitude !== undefined && { longitude: parseFloat(longitude) }),
+        ...(isTemporarilyClosed !== undefined && { isTemporarilyClosed }),
       },
     });
 
@@ -90,7 +104,7 @@ export const deleteTurf = async (
     const { id } = req.params;
 
     await prisma.turf.delete({
-      where: { id: parseInt(id) },
+      where: { id: parseId(id) },
     });
 
     res.status(200).json({ message: "Turf deleted successfully" });
@@ -115,7 +129,7 @@ export const closeTurf = async (
     }
 
     const turf = await prisma.turf.update({
-      where: { id: parseInt(id) },
+      where: { id: parseId(id) },
       data: {
         isTemporarilyClosed,
       },
